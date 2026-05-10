@@ -1,218 +1,189 @@
 # MedStock TH
 
-ระบบบริหารจัดการคลังเวชภัณฑ์สำหรับโรงพยาบาลและคลินิก พัฒนาด้วย Wails v2 + Go + SQLite + React/TypeScript  
-รองรับการทำงานแบบ offline บนเครื่อง Windows (Desktop App)
+MedStock TH is an offline Windows desktop application for medicine and medical supply stock management in hospitals, clinics, and small healthcare units. It is built with Wails v2, Go, SQLite, React, and TypeScript.
 
----
+The app stores data locally on each Windows machine and does not require a database server.
 
-## คุณสมบัติหลัก
+## Current Version
 
-- **รับสินค้า (Stock In)** — สร้างและยืนยันใบรับเวชภัณฑ์ บันทึก Lot / วันหมดอายุ / ราคาต้นทุน
-- **เบิกสินค้า (Stock Out)** — เบิกจ่ายตามหน่วยงาน ระบบตัด Lot อัตโนมัติตามหลัก FEFO
-- **ตัดปรับสต๊อก (Adjustment)** — ปรับยอดคงเหลือเมื่อนับสต๊อกพบความต่าง
-- **Stock Card** — ดูประวัติการเคลื่อนไหวรายเวชภัณฑ์ พร้อมกราฟยอดคงเหลือ
-- **Dashboard** — สรุปสถานะสต๊อก แจ้งเตือนใกล้หมด / ใกล้หมดอายุ กราฟ 30 วัน
-- **Export Excel** — ส่งออกรายงานสินค้าคงคลัง Stock Card และเอกสาร
-- **Import Excel** — นำเข้าทะเบียนเวชภัณฑ์และ Opening Stock จากไฟล์ Excel
-- **ระบบ Login** — Username + Password, Guest Mode (ดูข้อมูลเท่านั้น)
-- **Transaction Confirmation** — ยืนยัน password ก่อนดำเนินการสำคัญ (รับ/เบิก/ปรับ)
+**v1.0.1**
 
----
+Installer:
+
+```text
+build/bin/medstock-amd64-installer.exe
+```
+
+Database location:
+
+```text
+%AppData%\MedStock\medstock.db
+```
+
+## What's New in v1.0.1
+
+### User Roles and Permissions
+
+- Added user roles: `admin`, `staff`, and `viewer`
+- `admin` can manage users and master data
+- `staff` can receive, issue, and adjust stock
+- `viewer` can view data only
+- Added role display in the app layout
+- Restricted buttons and pages based on user permissions
+
+### User Management
+
+- Added edit username and display name
+- Added activate button for inactive users
+- Admin users can reset passwords and manage users
+
+### Backup and Restore
+
+- Added database backup from the Reports page
+- Users can choose where to save the backup file
+- Backup creates a full SQLite database snapshot, including:
+  - products and master data
+  - stock lots
+  - stock movements
+  - receive documents
+  - issue documents
+  - adjustments
+  - users, roles, and audit/history data
+- Added restore from `.db` backup file
+- Before restore, the app automatically backs up the current database
+- Before database migration/version upgrade, the app automatically creates a backup in:
+
+```text
+%AppData%\MedStock\backups
+```
+
+## Main Features
+
+- Dashboard for stock status, low stock, near-expiry items, and recent activity
+- Product and medicine master data
+- Stock In documents for receiving inventory
+- Stock Out documents for issuing inventory
+- FEFO lot selection for stock issue
+- Stock adjustment
+- Stock card and movement history
+- Excel import for product/master data and opening stock
+- Excel export for reports
+- User login with password confirmation for important transactions
+- Local SQLite database with automatic migrations
+- Full database backup and restore
 
 ## Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Framework | [Wails v2](https://wails.io/) — Go backend + Web frontend |
-| Backend | Go 1.21+ |
-| Database | SQLite (via `modernc.org/sqlite`) — ไม่ต้องติดตั้ง server |
-| Frontend | React 18 + TypeScript + Vite |
+| --- | --- |
+| Desktop framework | Wails v2 |
+| Backend | Go |
+| Database | SQLite via `modernc.org/sqlite` |
+| Frontend | React 18, TypeScript, Vite |
 | Styling | Tailwind CSS |
 | Charts | Recharts |
 | Excel | excelize/v2 |
-| Password | bcrypt (golang.org/x/crypto) |
+| Password hashing | bcrypt |
+| Installer | NSIS |
 
----
+## Project Structure
 
-## โครงสร้างโปรเจค
-
-```
+```text
 medstock-app/
-├── app.go                  # Wails App struct — entry point ทุก method ที่ frontend เรียก
-├── main.go                 # Wails bootstrap
-├── wails.json              # Wails config (app name, window size)
-├── go.mod / go.sum
-│
-├── models/
-│   └── models.go           # Go structs ทั้งหมด (serialized เป็น JSON ส่ง frontend)
-│
+├── app.go
+├── main.go
+├── wails.json
 ├── db/
-│   ├── db.go               # เปิด SQLite, รัน migrations อัตโนมัติ
+│   ├── db.go
 │   └── migrations/
-│       ├── 001_initial.sql  # สร้าง tables ทั้งหมด + indexes
-│       ├── 002_seed.sql     # ข้อมูล default (units, categories, system user, sysadmin)
-│       ├── 003_reference_no.sql  # เพิ่ม column reference_no
-│       ├── 004_indexes.sql  # เพิ่ม indexes เพิ่มเติม
-│       └── 005_sysadmin.sql # Ensure sysadmin มีอยู่ใน DB เก่า
-│
+├── handlers/
+├── models/
 ├── services/
-│   ├── master_service.go   # CRUD master data + auth (Login, SetPassword, ResetPassword)
-│   ├── product_service.go  # CRUD เวชภัณฑ์
-│   ├── stock_service.go    # Stock In/Out/Adjust, FEFO, Dashboard
-│   ├── export_service.go   # Export Excel
-│   └── import_service.go   # Import Excel with validation
-│
 ├── build/
 │   ├── appicon.png
 │   └── windows/
-│       └── installer/      # NSIS installer script (auto-generated by wails build -nsis)
-│
 └── frontend/
     ├── src/
-    │   ├── App.tsx          # Router + Auth flow (Login → App)
-    │   ├── context/
-    │   │   └── UserContext.tsx   # Global auth state (currentUser, isGuest, isSysAdmin)
-    │   ├── lib/
-    │   │   ├── api.ts       # Wails binding wrappers
-    │   │   └── utils.ts     # formatNumber, formatDate, today()
-    │   ├── components/
-    │   │   ├── layout/      # Sidebar, TopBar
-    │   │   └── ui/          # Button, Input, Table, Modal, PasswordConfirmModal, ...
-    │   ├── pages/
-    │   │   ├── Login/       # UserSelectPage — login form + guest mode
-    │   │   ├── Dashboard/   # สรุป + charts
-    │   │   ├── Products/    # ทะเบียนเวชภัณฑ์
-    │   │   ├── StockIn/     # ใบรับสินค้า
-    │   │   ├── StockOut/    # ใบเบิกสินค้า
-    │   │   ├── StockCard/   # Stock Card + กราฟ
-    │   │   ├── Adjustment/  # ตัดปรับสต๊อก
-    │   │   ├── MasterData/  # หน่วยนับ, แผนก, บริษัท, หมวดหมู่, ผู้ใช้
-    │   │   ├── Import/      # นำเข้า Excel
-    │   │   └── Reports/     # Export รายงาน
-    │   └── types/
-    │       └── models.ts    # TypeScript types (mirror ของ models.go)
-    └── package.json
+    ├── package.json
+    └── package-lock.json
 ```
 
----
-
-## การติดตั้งสำหรับ Development
+## Development
 
 ### Prerequisites
 
-- [Go 1.21+](https://go.dev/dl/)
-- [Node.js 18+](https://nodejs.org/)
-- [Wails CLI v2](https://wails.io/docs/gettingstarted/installation)
-- Windows (สำหรับ build — ใช้ WebView2)
+- Go 1.21+
+- Node.js 18+
+- Wails CLI v2
+- Windows with WebView2 Runtime
+- NSIS, required only when building the installer
+
+Install Wails CLI:
 
 ```bash
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
 ```
 
-### Run Development Mode
+Run development mode:
 
 ```bash
-cd medstock-app
 wails dev
 ```
 
-Hot-reload ทั้ง Go และ React อัตโนมัติ
-
-### Build Production
+Build production executable:
 
 ```bash
 wails build
-# output: build/bin/medstock-app.exe
 ```
 
-Build พร้อม NSIS installer:
+Build production executable and NSIS installer:
 
 ```bash
 wails build -nsis
-# output: build/bin/medstock-app-amd64-installer.exe
 ```
 
----
+Output files:
 
-## Database
-
-- ไฟล์ DB เก็บที่ `%APPDATA%\MedStock\medstock.db`
-- ไม่ต้องติดตั้ง database server ใดๆ
-- Migration รันอัตโนมัติเมื่อเปิดแอป (idempotent — รันซ้ำได้ปลอดภัย)
-
----
-
-## ระบบ Migrations (Version Upgrade Safety)
-
-ทุกครั้งที่เปิดแอป `db.Open()` จะ:
-
-1. ตรวจสอบตาราง `schema_migrations`
-2. อ่านไฟล์ `db/migrations/*.sql` เรียงตามชื่อ (001_, 002_, ...)
-3. รันเฉพาะ migration ที่ยังไม่ได้รัน
-4. บันทึกชื่อไฟล์ลง `schema_migrations`
-
-**กฎการเพิ่ม migration ใหม่:**
-- ตั้งชื่อต่อเนื่อง: `006_xxx.sql`, `007_xxx.sql`
-- เขียนแบบ additive เท่านั้น (ADD COLUMN, CREATE TABLE, CREATE INDEX)
-- ห้าม DROP หรือแก้ไข column ที่มีข้อมูลอยู่
-- ใช้ `IF NOT EXISTS` / `INSERT OR IGNORE` เสมอ
-
-**ตัวอย่าง migration ใหม่:**
-
-```sql
--- 006_add_barcode.sql
-ALTER TABLE products ADD COLUMN barcode TEXT NOT NULL DEFAULT '';
-CREATE INDEX IF NOT EXISTS idx_products_barcode ON products(barcode) WHERE barcode != '';
+```text
+build/bin/medstock-app.exe
+build/bin/medstock-amd64-installer.exe
 ```
 
-ผู้ใช้ที่ติดตั้งทับ version เก่า — migration ใหม่จะรันอัตโนมัติ, migration เก่าข้าม, ข้อมูลเดิมปลอดภัย
+## Database and Upgrade Safety
 
----
+- The application database is stored in `%AppData%\MedStock\medstock.db`
+- Database migrations run automatically when the app starts
+- Before running pending migrations on an existing database, the app creates an automatic backup
+- Manual backup and restore are available from the Reports page
+- The database is intentionally stored in AppData, not Program Files, because Windows normally protects Program Files from normal user writes
 
-## ระบบ Login
+## Default Login
 
-| บัญชี | Username | Password เริ่มต้น | สิทธิ์ |
-|-------|----------|----------|--------|
-| ผู้ดูแลระบบ | `sysadmin` | `MedS@2568#Rx!` | ทุกอย่าง รวม reset password ผู้ใช้อื่น |
-| ผู้ใช้ทั่วไป | กำหนดเอง | กำหนดเอง | รับ/เบิก/ปรับสต๊อก |
-| Guest | — | — | ดูข้อมูลเท่านั้น ไม่สามารถบันทึก |
+| Account | Username | Initial Password | Permission |
+| --- | --- | --- | --- |
+| System admin | `sysadmin` | `MedS@2568#Rx!` | Full admin access |
+| Staff | Created by admin | Created by admin | Stock operation access |
+| Viewer | Created by admin | Created by admin | View only |
 
-> **สำคัญ:** เปลี่ยน password ของ `sysadmin` ทันทีหลัง deploy ครั้งแรก ผ่านเมนู Sidebar → เปลี่ยนรหัสผ่าน
+Change the `sysadmin` password after the first deployment.
 
-Transaction ที่ต้องยืนยัน password:
-- ยืนยันรับสินค้า
-- ยืนยันเบิกสินค้า
-- บันทึกการตัดปรับสต๊อก
+## Release Checklist
 
----
-
-## FEFO (First Expired, First Out)
-
-เมื่อเบิกสินค้า ระบบจะตัด Lot ที่ **วันหมดอายุใกล้ที่สุดก่อน** อัตโนมัติ  
-ถ้า Lot เดียวไม่พอ จะตัดข้าม Lot ต่อไปตามลำดับ
-
----
-
-## Versioning
-
-ใช้ [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`
-
-| ไฟล์ | ตำแหน่ง |
-|------|---------|
-| App version | `wails.json` → `info.productVersion` |
-| Frontend | `frontend/package.json` → `version` |
-| Schema | ชื่อไฟล์ `db/migrations/NNN_xxx.sql` |
-
-**Release checklist:**
-1. เพิ่ม migration file ถ้ามีการเปลี่ยน DB schema
-2. อัปเดต version ใน `frontend/package.json`
-3. อัปเดต version ใน `wails.json`
-4. `wails build -nsis`
-5. แจกจ่าย installer — ผู้ใช้ติดตั้งทับ version เก่าได้ปลอดภัย (DB อยู่ใน `%APPDATA%\MedStock\`)
-
----
+1. Update version text in the app
+2. Update `frontend/package.json`
+3. Add migration file if the database schema changes
+4. Run tests and production build
+5. Build installer with `wails build -nsis`
+6. Create Git tag, for example `v1.0.1`
+7. Upload `medstock-amd64-installer.exe` to GitHub Release
+8. Add release notes
 
 ## License
 
-[AGPL-3.0](LICENSE) — ใช้งานฟรีแบบ open source  
-หากต้องการใช้เชิงพาณิชย์หรือ SaaS/PaaS โดยไม่เปิด source code กรุณาติดต่อขอ commercial license: kittanai.ka@unit.co.th
+[AGPL-3.0](LICENSE)
+
+For commercial licensing or support, contact:
+
+```text
+kittanai.ka@gmail.com
+```
