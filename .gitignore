@@ -1,0 +1,29 @@
+# Build output
+build/bin/
+build/windows/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/wailsjs/
+frontend/package.json.md5
+
+# Database (user data — never commit)
+*.db
+*.db-shm
+*.db-wal
+
+# Go
+*.exe
+*.test
+*.prof
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user

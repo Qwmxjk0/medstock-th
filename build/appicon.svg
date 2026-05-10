@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#0ea5e9"/>
+    </linearGradient>
+  </defs>
+  <!-- Background rounded square -->
+  <rect width="1024" height="1024" rx="200" ry="200" fill="url(#bg)"/>
+  <!-- Letter M -->
+  <text
+    x="512" y="700"
+    font-family="Arial Black, Arial, sans-serif"
+    font-weight="900"
+    font-size="640"
+    text-anchor="middle"
+    fill="white"
+    letter-spacing="-20"
+  >M</text>
+  <!-- Small medical cross bottom-right -->
+  <rect x="760" y="760" width="30" height="100" rx="8" fill="white" opacity="0.5"/>
+  <rect x="720" y="800" width="110" height="30" rx="8" fill="white" opacity="0.5"/>
+</svg>
