@@ -78,14 +78,14 @@ export function StockOutFormPage() {
         approvedQty: newItem.requestedQty,
         unitCost: 0,
         note: newItem.note,
-      })
+      }, currentUser?.id ?? 0)
       setNewItem({ productId: null, requestedQty: 1, note: '' })
       setFefoLots([])
       refreshDoc()
     } catch (e: any) { setError(e.message ?? String(e)) }
   }
 
-  const removeItem = async (itemId: number) => { await api.removeDocumentItem(itemId); refreshDoc() }
+  const removeItem = async (itemId: number) => { await api.removeDocumentItem(itemId, currentUser?.id ?? 0); refreshDoc() }
   const refreshDoc = () => { if (doc) api.getDocumentByID(doc.id).then((d: any) => setDoc(d)) }
 
   const confirmDoc = async () => {

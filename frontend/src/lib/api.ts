@@ -16,27 +16,27 @@ async function call<T>(method: string, ...args: unknown[]): Promise<T> {
 export const api = {
   // Units
   getUnits: (activeOnly = true) => call('GetUnits', activeOnly),
-  saveUnit: (u: object) => call('SaveUnit', u),
+  saveUnit: (u: object, adminID: number) => call('SaveUnit', u, adminID),
   deactivateUnit: (id: number, userID: number) => call('DeactivateUnit', id, userID),
 
   // Departments
   getDepartments: (activeOnly = true) => call('GetDepartments', activeOnly),
-  saveDepartment: (d: object) => call('SaveDepartment', d),
+  saveDepartment: (d: object, adminID: number) => call('SaveDepartment', d, adminID),
   deactivateDepartment: (id: number, userID: number) => call('DeactivateDepartment', id, userID),
 
   // Suppliers
   getSuppliers: (activeOnly = true) => call('GetSuppliers', activeOnly),
-  saveSupplier: (s: object) => call('SaveSupplier', s),
+  saveSupplier: (s: object, adminID: number) => call('SaveSupplier', s, adminID),
   deactivateSupplier: (id: number, userID: number) => call('DeactivateSupplier', id, userID),
 
   // Categories
   getCategories: (activeOnly = true) => call('GetCategories', activeOnly),
-  saveCategory: (c: object) => call('SaveCategory', c),
+  saveCategory: (c: object, adminID: number) => call('SaveCategory', c, adminID),
   deactivateCategory: (id: number, userID: number) => call('DeactivateCategory', id, userID),
 
   // Users
   getUsers: () => call('GetUsers'),
-  saveUser: (u: object) => call('SaveUser', u),
+  saveUser: (u: object, adminID: number) => call('SaveUser', u, adminID),
   deactivateUser: (id: number, adminID: number) => call('DeactivateUser', id, adminID),
   activateUser: (id: number, adminID: number) => call('ActivateUser', id, adminID),
   updateUserLastSelected: (id: number) => call('UpdateUserLastSelected', id),
@@ -58,15 +58,15 @@ export const api = {
   deactivateProduct: (id: number, userID: number) => call('DeactivateProduct', id, userID),
   checkDuplicateName: (name: string, excludeID = 0) => call('CheckDuplicateName', name, excludeID),
   getProductAliases: (productID: number) => call('GetProductAliases', productID),
-  saveProductAlias: (a: object) => call('SaveProductAlias', a),
+  saveProductAlias: (a: object, userID: number) => call('SaveProductAlias', a, userID),
 
   // Documents
   getDocuments: (f: object) => call('GetDocuments', f),
   getDocumentByID: (id: number) => call('GetDocumentByID', id),
   createDraft: (req: object) => call('CreateDraft', req),
   updateDraft: (id: number, req: object) => call('UpdateDraft', id, req),
-  addDocumentItem: (docID: number, item: object) => call('AddDocumentItem', docID, item),
-  removeDocumentItem: (itemID: number) => call('RemoveDocumentItem', itemID),
+  addDocumentItem: (docID: number, item: object, userID: number) => call('AddDocumentItem', docID, item, userID),
+  removeDocumentItem: (itemID: number, userID: number) => call('RemoveDocumentItem', itemID, userID),
   confirmStockIn: (docID: number, userID: number) => call('ConfirmStockIn', docID, userID),
   confirmStockOut: (docID: number, userID: number) => call('ConfirmStockOut', docID, userID),
   cancelDocument: (docID: number, reason: string, userID: number) => call('CancelDocument', docID, reason, userID),
@@ -107,6 +107,6 @@ export const api = {
     call('ExportStockCard', productID, productName, dateFrom, dateTo, destDir),
   exportDocuments: (docType: string, dateFrom: string, dateTo: string, destDir = '') =>
     call('ExportDocuments', docType, dateFrom, dateTo, destDir),
-  backupDatabase: (destPath: string) => call('BackupDatabase', destPath),
-  restoreDatabase: (sourcePath: string) => call('RestoreDatabase', sourcePath),
+  backupDatabase: (destPath: string, adminID: number) => call('BackupDatabase', destPath, adminID),
+  restoreDatabase: (sourcePath: string, adminID: number) => call('RestoreDatabase', sourcePath, adminID),
 }

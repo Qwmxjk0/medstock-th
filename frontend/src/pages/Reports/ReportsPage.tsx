@@ -9,7 +9,7 @@ import { useUser } from '../../context/UserContext'
 type ReportType = 'inventory' | 'in' | 'out' | 'backup'
 
 export function ReportsPage() {
-  const { canManageMaster } = useUser()
+  const { canManageMaster, currentUser } = useUser()
   const [tab, setTab] = useState<ReportType>('inventory')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState(today())
@@ -24,7 +24,7 @@ export function ReportsPage() {
     setLoading(true)
     setMsg('')
     try {
-      const path = await api.backupDatabase(destPath) as string
+      const path = await api.backupDatabase(destPath, currentUser?.id ?? 0) as string
       setMsg(`บันทึกไฟล์ backup สำเร็จ:\n${path}`)
     } catch (e: any) {
       setMsg('backup ไม่สำเร็จ: ' + (e.message ?? e))
@@ -41,7 +41,7 @@ export function ReportsPage() {
     setLoading(true)
     setMsg('')
     try {
-      const preRestoreBackup = await api.restoreDatabase(sourcePath) as string
+      const preRestoreBackup = await api.restoreDatabase(sourcePath, currentUser?.id ?? 0) as string
       setMsg(`restore สำเร็จ\nbackup ก่อน restore ถูกเก็บไว้ที่:\n${preRestoreBackup}`)
       setTimeout(() => window.location.reload(), 800)
     } catch (e: any) {

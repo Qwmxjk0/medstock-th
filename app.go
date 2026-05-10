@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"medstock/db"
@@ -71,6 +72,48 @@ func (a *App) shutdown(_ context.Context) {
 	}
 }
 
+func (a *App) userRole(userID int64) (string, bool, error) {
+	var role string
+	var isSystem int
+	var isActive int
+	err := a.sqlDB.QueryRow(
+		`SELECT role, is_system_account, is_active FROM users WHERE id=?`,
+		userID,
+	).Scan(&role, &isSystem, &isActive)
+	if err != nil {
+		return "", false, err
+	}
+	if isActive != 1 {
+		return "", false, fmt.Errorf("ผู้ใช้ถูกปิดใช้งาน")
+	}
+	if isSystem == 1 {
+		return "admin", true, nil
+	}
+	return strings.ToLower(strings.TrimSpace(role)), false, nil
+}
+
+func (a *App) requireAdmin(userID int64) error {
+	role, isSystem, err := a.userRole(userID)
+	if err != nil {
+		return err
+	}
+	if isSystem || role == "admin" {
+		return nil
+	}
+	return fmt.Errorf("เฉพาะผู้ดูแลระบบเท่านั้น")
+}
+
+func (a *App) requireStockWriter(userID int64) error {
+	role, isSystem, err := a.userRole(userID)
+	if err != nil {
+		return err
+	}
+	if isSystem || role == "admin" || role == "staff" {
+		return nil
+	}
+	return fmt.Errorf("ผู้ใช้นี้ไม่มีสิทธิ์บันทึกรายการสต๊อก")
+}
+
 // ─── Initialize ──────────────────────────────────────────────────────────────
 
 type InitProgress struct {
@@ -115,42 +158,87 @@ func (a *App) Initialize() error {
 func (a *App) GetUnits(activeOnly bool) ([]models.Unit, error) {
 	return a.masterSvc.GetUnits(activeOnly)
 }
-func (a *App) SaveUnit(u models.Unit) (int64, error) { return a.masterSvc.SaveUnit(u) }
-func (a *App) DeactivateUnit(id, userID int64) error { return a.masterSvc.DeactivateUnit(id, userID) }
+func (a *App) SaveUnit(u models.Unit, adminID int64) (int64, error) {
+	if err := a.requireAdmin(adminID); err != nil {
+		return 0, err
+	}
+	return a.masterSvc.SaveUnit(u)
+}
+func (a *App) DeactivateUnit(id, userID int64) error {
+	if err := a.requireAdmin(userID); err != nil {
+		return err
+	}
+	return a.masterSvc.DeactivateUnit(id, userID)
+}
 
 func (a *App) GetDepartments(activeOnly bool) ([]models.Department, error) {
 	return a.masterSvc.GetDepartments(activeOnly)
 }
-func (a *App) SaveDepartment(d models.Department) (int64, error) {
+func (a *App) SaveDepartment(d models.Department, adminID int64) (int64, error) {
+	if err := a.requireAdmin(adminID); err != nil {
+		return 0, err
+	}
 	return a.masterSvc.SaveDepartment(d)
 }
 func (a *App) DeactivateDepartment(id, userID int64) error {
+	if err := a.requireAdmin(userID); err != nil {
+		return err
+	}
 	return a.masterSvc.DeactivateDepartment(id, userID)
 }
 
 func (a *App) GetSuppliers(activeOnly bool) ([]models.Supplier, error) {
 	return a.masterSvc.GetSuppliers(activeOnly)
 }
-func (a *App) SaveSupplier(s models.Supplier) (int64, error) { return a.masterSvc.SaveSupplier(s) }
+func (a *App) SaveSupplier(s models.Supplier, adminID int64) (int64, error) {
+	if err := a.requireAdmin(adminID); err != nil {
+		return 0, err
+	}
+	return a.masterSvc.SaveSupplier(s)
+}
 func (a *App) DeactivateSupplier(id, userID int64) error {
+	if err := a.requireAdmin(userID); err != nil {
+		return err
+	}
 	return a.masterSvc.DeactivateSupplier(id, userID)
 }
 
 func (a *App) GetCategories(activeOnly bool) ([]models.ProductCategory, error) {
 	return a.masterSvc.GetCategories(activeOnly)
 }
-func (a *App) SaveCategory(c models.ProductCategory) (int64, error) {
+func (a *App) SaveCategory(c models.ProductCategory, adminID int64) (int64, error) {
+	if err := a.requireAdmin(adminID); err != nil {
+		return 0, err
+	}
 	return a.masterSvc.SaveCategory(c)
 }
 func (a *App) DeactivateCategory(id, userID int64) error {
+	if err := a.requireAdmin(userID); err != nil {
+		return err
+	}
 	return a.masterSvc.DeactivateCategory(id, userID)
 }
 
-func (a *App) GetUsers() ([]models.User, error)       { return a.masterSvc.GetUsers() }
-func (a *App) SaveUser(u models.User) (int64, error)  { return a.masterSvc.SaveUser(u) }
-func (a *App) DeactivateUser(id, adminID int64) error { return a.masterSvc.DeactivateUser(id, adminID) }
-func (a *App) ActivateUser(id, adminID int64) error   { return a.masterSvc.ActivateUser(id, adminID) }
-func (a *App) UpdateUserLastSelected(id int64) error  { return a.masterSvc.UpdateUserLastSelected(id) }
+func (a *App) GetUsers() ([]models.User, error) { return a.masterSvc.GetUsers() }
+func (a *App) SaveUser(u models.User, adminID int64) (int64, error) {
+	if err := a.requireAdmin(adminID); err != nil {
+		return 0, err
+	}
+	return a.masterSvc.SaveUser(u)
+}
+func (a *App) DeactivateUser(id, adminID int64) error {
+	if err := a.requireAdmin(adminID); err != nil {
+		return err
+	}
+	return a.masterSvc.DeactivateUser(id, adminID)
+}
+func (a *App) ActivateUser(id, adminID int64) error {
+	if err := a.requireAdmin(adminID); err != nil {
+		return err
+	}
+	return a.masterSvc.ActivateUser(id, adminID)
+}
+func (a *App) UpdateUserLastSelected(id int64) error { return a.masterSvc.UpdateUserLastSelected(id) }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -185,12 +273,21 @@ func (a *App) GetProductByID(id int64) (*models.Product, error) {
 	return a.productSvc.GetProductByID(id)
 }
 func (a *App) CreateProduct(req models.CreateProductRequest, userID int64) (int64, error) {
+	if err := a.requireAdmin(userID); err != nil {
+		return 0, err
+	}
 	return a.productSvc.CreateProduct(req, userID)
 }
 func (a *App) UpdateProduct(id int64, req models.CreateProductRequest, userID int64) error {
+	if err := a.requireAdmin(userID); err != nil {
+		return err
+	}
 	return a.productSvc.UpdateProduct(id, req, userID)
 }
 func (a *App) DeactivateProduct(id, userID int64) error {
+	if err := a.requireAdmin(userID); err != nil {
+		return err
+	}
 	return a.productSvc.DeactivateProduct(id, userID)
 }
 func (a *App) CheckDuplicateName(name string, excludeID int64) ([]models.Product, error) {
@@ -199,7 +296,10 @@ func (a *App) CheckDuplicateName(name string, excludeID int64) ([]models.Product
 func (a *App) GetProductAliases(productID int64) ([]models.ProductAlias, error) {
 	return a.productSvc.GetProductAliases(productID)
 }
-func (a *App) SaveProductAlias(al models.ProductAlias) error {
+func (a *App) SaveProductAlias(al models.ProductAlias, userID int64) error {
+	if err := a.requireAdmin(userID); err != nil {
+		return err
+	}
 	return a.productSvc.SaveProductAlias(al)
 }
 
@@ -212,22 +312,45 @@ func (a *App) GetDocumentByID(id int64) (*models.StockDocument, error) {
 	return a.stockSvc.GetDocumentByID(id)
 }
 func (a *App) CreateDraft(req models.CreateDocumentRequest) (int64, error) {
+	if err := a.requireStockWriter(req.CreatedBy); err != nil {
+		return 0, err
+	}
 	return a.stockSvc.CreateDraft(req)
 }
 func (a *App) UpdateDraft(id int64, req models.CreateDocumentRequest) error {
+	if err := a.requireStockWriter(req.CreatedBy); err != nil {
+		return err
+	}
 	return a.stockSvc.UpdateDraft(id, req)
 }
-func (a *App) AddDocumentItem(docID int64, item models.DocumentItemRequest) error {
+func (a *App) AddDocumentItem(docID int64, item models.DocumentItemRequest, userID int64) error {
+	if err := a.requireStockWriter(userID); err != nil {
+		return err
+	}
 	return a.stockSvc.AddDocumentItem(docID, item)
 }
-func (a *App) RemoveDocumentItem(itemID int64) error { return a.stockSvc.RemoveDocumentItem(itemID) }
+func (a *App) RemoveDocumentItem(itemID int64, userID int64) error {
+	if err := a.requireStockWriter(userID); err != nil {
+		return err
+	}
+	return a.stockSvc.RemoveDocumentItem(itemID)
+}
 func (a *App) ConfirmStockIn(docID, confirmedByID int64) error {
+	if err := a.requireStockWriter(confirmedByID); err != nil {
+		return err
+	}
 	return a.stockSvc.ConfirmStockIn(docID, confirmedByID)
 }
 func (a *App) ConfirmStockOut(docID, confirmedByID int64) error {
+	if err := a.requireStockWriter(confirmedByID); err != nil {
+		return err
+	}
 	return a.stockSvc.ConfirmStockOut(docID, confirmedByID)
 }
 func (a *App) CancelDocument(docID int64, reason string, userID int64) error {
+	if err := a.requireStockWriter(userID); err != nil {
+		return err
+	}
 	return a.stockSvc.CancelDocument(docID, reason, userID)
 }
 
@@ -237,6 +360,9 @@ func (a *App) GetFEFOLots(productID int64, neededQty float64) ([]models.LotAlloc
 	return a.stockSvc.GetFEFOLots(productID, neededQty)
 }
 func (a *App) CreateAdjustment(req models.AdjustmentRequest) (int64, error) {
+	if err := a.requireStockWriter(req.CreatedBy); err != nil {
+		return 0, err
+	}
 	return a.stockSvc.CreateAdjustment(req)
 }
 
@@ -278,10 +404,16 @@ func (a *App) ExportStockCard(productID int64, productName, dateFrom, dateTo, de
 func (a *App) ExportDocuments(docType, dateFrom, dateTo, destDir string) (string, error) {
 	return a.exportSvc.ExportDocuments(docType, dateFrom, dateTo, destDir)
 }
-func (a *App) BackupDatabase(destPath string) (string, error) {
+func (a *App) BackupDatabase(destPath string, adminID int64) (string, error) {
+	if err := a.requireAdmin(adminID); err != nil {
+		return "", err
+	}
 	return a.exportSvc.BackupDatabase(destPath)
 }
-func (a *App) RestoreDatabase(sourcePath string) (string, error) {
+func (a *App) RestoreDatabase(sourcePath string, adminID int64) (string, error) {
+	if err := a.requireAdmin(adminID); err != nil {
+		return "", err
+	}
 	if sourcePath == "" {
 		return "", fmt.Errorf("กรุณาเลือกไฟล์ backup")
 	}
@@ -380,12 +512,18 @@ func (a *App) PreviewProductsImport(filePath string) (*models.ProductImportPrevi
 	return a.importSvc.PreviewProductsImport(filePath)
 }
 func (a *App) ImportProducts(filePath string, partial bool, userID int64) (*models.ImportResult, error) {
+	if err := a.requireAdmin(userID); err != nil {
+		return nil, err
+	}
 	return a.importSvc.ImportProducts(filePath, partial, userID)
 }
 func (a *App) PreviewStockImport(filePath string) (*models.StockImportPreview, error) {
 	return a.importSvc.PreviewStockImport(filePath)
 }
 func (a *App) ImportOpeningStock(filePath string, partial bool, userID int64) (*models.ImportResult, error) {
+	if err := a.requireAdmin(userID); err != nil {
+		return nil, err
+	}
 	return a.importSvc.ImportOpeningStock(filePath, partial, userID)
 }
 

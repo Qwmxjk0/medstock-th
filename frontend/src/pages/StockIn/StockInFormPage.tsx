@@ -85,7 +85,7 @@ export function StockInFormPage() {
         approvedQty: 0,
         unitCost: newItem.unitCost ?? 0,
         note: newItem.note ?? '',
-      })
+      }, currentUser?.id ?? 0)
       setNewItem({ quantity: 1, unitCost: 0 })
       refreshDoc()
     } catch (e: any) {
@@ -94,7 +94,7 @@ export function StockInFormPage() {
   }
 
   const removeItem = async (itemId: number) => {
-    await api.removeDocumentItem(itemId)
+    await api.removeDocumentItem(itemId, currentUser?.id ?? 0)
     refreshDoc()
   }
 

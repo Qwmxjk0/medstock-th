@@ -174,42 +174,46 @@ function SimpleListTab<T extends { id: number; name: string; isActive: boolean }
 }
 
 function UnitsTab() {
+  const { currentUser } = useUser()
   return (
     <SimpleListTab<Unit>
       fetchFn={() => api.getUnits(false) as any}
-      saveFn={u => api.saveUnit(u) as any}
-      deactivateFn={id => api.deactivateUnit(id, 1) as any}
+      saveFn={u => api.saveUnit(u, currentUser?.id ?? 0) as any}
+      deactivateFn={id => api.deactivateUnit(id, currentUser?.id ?? 0) as any}
     />
   )
 }
 
 function DepartmentsTab() {
+  const { currentUser } = useUser()
   return (
     <SimpleListTab<Department>
       fetchFn={() => api.getDepartments(false) as any}
-      saveFn={d => api.saveDepartment(d) as any}
-      deactivateFn={id => api.deactivateDepartment(id, 1) as any}
+      saveFn={d => api.saveDepartment(d, currentUser?.id ?? 0) as any}
+      deactivateFn={id => api.deactivateDepartment(id, currentUser?.id ?? 0) as any}
     />
   )
 }
 
 function SuppliersTab() {
+  const { currentUser } = useUser()
   return (
     <SimpleListTab<Supplier>
       fetchFn={() => api.getSuppliers(false) as any}
-      saveFn={s => api.saveSupplier(s) as any}
-      deactivateFn={id => api.deactivateSupplier(id, 1) as any}
+      saveFn={s => api.saveSupplier(s, currentUser?.id ?? 0) as any}
+      deactivateFn={id => api.deactivateSupplier(id, currentUser?.id ?? 0) as any}
       extraField={{ key: 'contact', label: 'ติดต่อ/โทร' }}
     />
   )
 }
 
 function CategoriesTab() {
+  const { currentUser } = useUser()
   return (
     <SimpleListTab<ProductCategory>
       fetchFn={() => api.getCategories(false) as any}
-      saveFn={c => api.saveCategory(c) as any}
-      deactivateFn={id => api.deactivateCategory(id, 1) as any}
+      saveFn={c => api.saveCategory(c, currentUser?.id ?? 0) as any}
+      deactivateFn={id => api.deactivateCategory(id, currentUser?.id ?? 0) as any}
     />
   )
 }
@@ -256,7 +260,7 @@ function UsersTab() {
     if (!editingName) return
     setError(''); setSuccess('')
     try {
-      await api.saveUser(editingName as any)
+      await api.saveUser(editingName as any, currentUser?.id ?? 0)
       setEditingName(null); load()
       setSuccess('บันทึกข้อมูลผู้ใช้สำเร็จ')
     } catch (e: any) { setError(e.message ?? String(e)) }

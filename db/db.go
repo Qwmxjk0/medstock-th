@@ -80,7 +80,7 @@ func runMigrations(db *sql.DB, dbPath string, dbAlreadyExists bool) error {
 		if err != nil {
 			return fmt.Errorf("read %s: %w", name, err)
 		}
-		if _, err := db.Exec(string(data)); err != nil {
+		if err := execMigration(db, name, string(data)); err != nil {
 			return fmt.Errorf("exec %s: %w", name, err)
 		}
 		if _, err := db.Exec(`INSERT INTO schema_migrations(name) VALUES(?)`, name); err != nil {
@@ -88,6 +88,43 @@ func runMigrations(db *sql.DB, dbPath string, dbAlreadyExists bool) error {
 		}
 	}
 	return nil
+}
+
+func execMigration(db *sql.DB, name, sqlText string) error {
+	if name == "006_user_roles.sql" && columnExists(db, "users", "role") {
+		_, err := db.Exec(`UPDATE users
+			SET role = CASE
+				WHEN is_system_account = 1 THEN 'admin'
+				WHEN role IS NULL OR role = '' THEN 'staff'
+				ELSE role
+			END`)
+		return err
+	}
+	_, err := db.Exec(sqlText)
+	return err
+}
+
+func columnExists(db *sql.DB, tableName, columnName string) bool {
+	rows, err := db.Query("PRAGMA table_info(" + tableName + ")")
+	if err != nil {
+		return false
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var cid int
+		var name, typ string
+		var notNull int
+		var defaultValue any
+		var pk int
+		if err := rows.Scan(&cid, &name, &typ, &notNull, &defaultValue, &pk); err != nil {
+			return false
+		}
+		if strings.EqualFold(name, columnName) {
+			return true
+		}
+	}
+	return false
 }
 
 func backupBeforeMigrations(db *sql.DB, dbPath string) (string, error) {
