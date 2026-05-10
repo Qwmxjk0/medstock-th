@@ -16,7 +16,7 @@ export function TopBar(_props: TopBarProps) {
       <span className="text-sm text-gray-500">{now}</span>
       <span className="text-sm text-gray-600 font-medium">
         {currentUser?.displayName ?? ''}
-        {currentUser?.isSystemAccount && <span className="ml-1.5 text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">ผู้ดูแลระบบ</span>}
+        {currentUser && <span className="ml-1.5 text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">{currentUser.isSystemAccount ? 'admin' : currentUser.role}</span>}
       </span>
     </header>
   )

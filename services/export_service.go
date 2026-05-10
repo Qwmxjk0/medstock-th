@@ -6,6 +6,7 @@ import (
 	"medstock/models"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/xuri/excelize/v2"
@@ -17,6 +18,27 @@ type ExportService struct {
 
 func NewExportService(db *sql.DB) *ExportService {
 	return &ExportService{db: db}
+}
+
+func (s *ExportService) BackupDatabase(destPath string) (string, error) {
+	if strings.TrimSpace(destPath) == "" {
+		return "", fmt.Errorf("กรุณาเลือกที่เก็บไฟล์ backup")
+	}
+	if filepath.Ext(destPath) == "" {
+		destPath += ".db"
+	}
+	if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+		return "", fmt.Errorf("สร้างโฟลเดอร์ backup ไม่สำเร็จ: %w", err)
+	}
+	if err := os.Remove(destPath); err != nil && !os.IsNotExist(err) {
+		return "", fmt.Errorf("ลบไฟล์ backup เดิมไม่สำเร็จ: %w", err)
+	}
+
+	escapedPath := strings.ReplaceAll(destPath, "'", "''")
+	if _, err := s.db.Exec("VACUUM INTO '" + escapedPath + "'"); err != nil {
+		return "", fmt.Errorf("backup database ไม่สำเร็จ: %w", err)
+	}
+	return destPath, nil
 }
 
 func (s *ExportService) ExportInventory(destPath string) (string, error) {

@@ -10,7 +10,7 @@ import { useUser } from '../../context/UserContext'
 import { PasswordConfirmModal } from '../../components/ui/PasswordConfirmModal'
 
 export function AdjustmentPage() {
-  const { isGuest, currentUser } = useUser()
+  const { canWriteStock, currentUser } = useUser()
   const [products, setProducts] = useState<Product[]>([])
   const [lots, setLots] = useState<StockLot[]>([])
   const [items, setItems] = useState<AdjustmentItemRequest[]>([])
@@ -146,10 +146,10 @@ export function AdjustmentPage() {
         </Table>
       </div>
 
-      {items.length > 0 && !isGuest && (
+      {items.length > 0 && canWriteStock && (
         <Button onClick={() => setPwConfirmOpen(true)}>บันทึกการตัดปรับสต๊อก</Button>
       )}
-      {isGuest && (
+      {!canWriteStock && (
         <p className="text-xs text-gray-400 italic">* ผู้เยี่ยมชมไม่สามารถบันทึกรายการได้</p>
       )}
 
@@ -163,3 +163,4 @@ export function AdjustmentPage() {
     </div>
   )
 }
+

@@ -38,6 +38,7 @@ export const api = {
   getUsers: () => call('GetUsers'),
   saveUser: (u: object) => call('SaveUser', u),
   deactivateUser: (id: number, adminID: number) => call('DeactivateUser', id, adminID),
+  activateUser: (id: number, adminID: number) => call('ActivateUser', id, adminID),
   updateUserLastSelected: (id: number) => call('UpdateUserLastSelected', id),
 
   // Auth
@@ -90,7 +91,9 @@ export const api = {
 
   // Dialogs
   openFileDialog: () => call<string>('OpenFileDialog'),
+  openBackupFileDialog: () => call<string>('OpenBackupFileDialog'),
   saveFileDialog: (defaultFilename: string) => call<string>('SaveFileDialog', defaultFilename),
+  saveBackupFileDialog: (defaultFilename: string) => call<string>('SaveBackupFileDialog', defaultFilename),
   previewProductsImport: (filePath: string) => call<any>('PreviewProductsImport', filePath),
   importProducts: (filePath: string, partial: boolean, userID: number) =>
     call<any>('ImportProducts', filePath, partial, userID),
@@ -104,4 +107,6 @@ export const api = {
     call('ExportStockCard', productID, productName, dateFrom, dateTo, destDir),
   exportDocuments: (docType: string, dateFrom: string, dateTo: string, destDir = '') =>
     call('ExportDocuments', docType, dateFrom, dateTo, destDir),
+  backupDatabase: (destPath: string) => call('BackupDatabase', destPath),
+  restoreDatabase: (sourcePath: string) => call('RestoreDatabase', sourcePath),
 }

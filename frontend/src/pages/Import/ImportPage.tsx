@@ -22,10 +22,10 @@ interface StockRow {
 }
 
 export function ImportPage() {
-  const { currentUser, isGuest } = useUser()
+  const { currentUser, canManageMaster } = useUser()
   const [tab, setTab] = useState<TabType>('products')
 
-  if (isGuest) return (
+  if (!canManageMaster) return (
     <div className="p-8 flex flex-col items-center gap-3 text-center">
       <p className="text-gray-500 font-medium">ผู้เยี่ยมชมไม่สามารถนำเข้าข้อมูลได้</p>
       <p className="text-sm text-gray-400">กรุณาเข้าสู่ระบบด้วยบัญชีผู้ใช้</p>
@@ -358,3 +358,4 @@ function StockImportTab({ userID }: { userID: number }) {
     </div>
   )
 }
+

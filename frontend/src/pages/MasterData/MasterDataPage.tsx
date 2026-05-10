@@ -12,6 +12,15 @@ type Tab = 'units' | 'departments' | 'suppliers' | 'categories' | 'users'
 
 export function MasterDataPage() {
   const [tab, setTab] = useState<Tab>('units')
+  const { canManageMaster } = useUser()
+
+  if (!canManageMaster) {
+    return (
+      <div className="p-8 text-center text-sm text-gray-500">
+        เฉพาะ admin เท่านั้นที่จัดการข้อมูลพื้นฐานได้
+      </div>
+    )
+  }
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'units', label: 'หน่วยนับ' },
@@ -206,7 +215,7 @@ function CategoriesTab() {
 }
 
 function UsersTab() {
-  const { currentUser, isSysAdmin } = useUser()
+  const { currentUser, isAdmin } = useUser()
   const [users, setUsers] = useState<User[]>([])
   const [creating, setCreating] = useState(false)
   const [editingName, setEditingName] = useState<User | null>(null)
@@ -216,6 +225,7 @@ function UsersTab() {
   // new user form
   const [newUsername, setNewUsername] = useState('')
   const [newDisplayName, setNewDisplayName] = useState('')
+  const [newRole, setNewRole] = useState<'admin' | 'staff' | 'viewer'>('staff')
   const [newPw, setNewPw] = useState('')
   const [newPw2, setNewPw2] = useState('')
   const [showNewPw, setShowNewPw] = useState(false)
@@ -235,8 +245,8 @@ function UsersTab() {
     setError(''); setSuccess('')
     if (newPw !== newPw2) { setError('รหัสผ่านไม่ตรงกัน'); return }
     try {
-      await api.createUser(currentUser!.id, { id: 0, username: newUsername, displayName: newDisplayName, isSystemAccount: false, isActive: true, lockedAt: '', lastSelectedAt: '', createdAt: '', updatedAt: '' }, newPw)
-      setCreating(false); setNewUsername(''); setNewDisplayName(''); setNewPw(''); setNewPw2('')
+      await api.createUser(currentUser!.id, { id: 0, username: newUsername, displayName: newDisplayName, role: newRole, isSystemAccount: false, isActive: true, lockedAt: '', lastSelectedAt: '', createdAt: '', updatedAt: '' }, newPw)
+      setCreating(false); setNewUsername(''); setNewDisplayName(''); setNewRole('staff'); setNewPw(''); setNewPw2('')
       load()
       setSuccess('เพิ่มผู้ใช้สำเร็จ')
     } catch (e: any) { setError(e.message ?? String(e)) }
@@ -248,6 +258,7 @@ function UsersTab() {
     try {
       await api.saveUser(editingName as any)
       setEditingName(null); load()
+      setSuccess('บันทึกข้อมูลผู้ใช้สำเร็จ')
     } catch (e: any) { setError(e.message ?? String(e)) }
   }
 
@@ -267,12 +278,12 @@ function UsersTab() {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        {isSysAdmin && (
+        {isAdmin && (
           <Button size="sm" onClick={() => { setCreating(true); setError(''); setSuccess('') }}>
             <Plus size={14} /> เพิ่มผู้ใช้
           </Button>
         )}
-        {!isSysAdmin && <div />}
+        {!isAdmin && <div />}
       </div>
 
       {error && <p className="text-sm text-red-600 bg-red-50 p-2 rounded">{error}</p>}
@@ -286,6 +297,15 @@ function UsersTab() {
             <Input placeholder="Username *" value={newUsername} onChange={e => setNewUsername(e.target.value)} />
             <Input placeholder="ชื่อ-นามสกุล *" value={newDisplayName} onChange={e => setNewDisplayName(e.target.value)} />
           </div>
+          <select
+            value={newRole}
+            onChange={e => setNewRole(e.target.value as 'admin' | 'staff' | 'viewer')}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md outline-none focus:border-blue-500"
+          >
+            <option value="staff">staff - รับ/เบิก/ปรับสต๊อก</option>
+            <option value="admin">admin - จัดการ user + master data</option>
+            <option value="viewer">viewer - ดูอย่างเดียว</option>
+          </select>
           <div className="grid grid-cols-2 gap-2 relative">
             <div className="relative">
               <input type={showNewPw ? 'text' : 'password'} placeholder="รหัสผ่าน (อย่างน้อย 6 ตัว) *"
@@ -331,14 +351,29 @@ function UsersTab() {
         </div>
       )}
 
-      {/* Edit display name */}
+      {/* Edit user */}
       {editingName && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex gap-2 items-center">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 grid grid-cols-[minmax(160px,1fr)_minmax(220px,1.4fr)_minmax(180px,220px)_auto_auto] gap-2 items-center">
+          <Input
+            placeholder="Username *"
+            value={editingName.username}
+            onChange={e => setEditingName(p => p ? { ...p, username: e.target.value } : p)}
+          />
           <Input
             placeholder="ชื่อ-นามสกุล *"
             value={editingName.displayName}
             onChange={e => setEditingName(p => p ? { ...p, displayName: e.target.value } : p)}
           />
+          <select
+            value={editingName.role || 'staff'}
+            disabled={editingName.isSystemAccount}
+            onChange={e => setEditingName(p => p ? { ...p, role: e.target.value as 'admin' | 'staff' | 'viewer' } : p)}
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md outline-none focus:border-blue-500 disabled:bg-gray-100"
+          >
+            <option value="staff">staff</option>
+            <option value="admin">admin</option>
+            <option value="viewer">viewer</option>
+          </select>
           <Button size="sm" onClick={saveDisplayName}>บันทึก</Button>
           <Button size="sm" variant="secondary" onClick={() => setEditingName(null)}>ยกเลิก</Button>
         </div>
@@ -352,7 +387,10 @@ function UsersTab() {
           {normalUsers.map(u => (
             <Tr key={u.id}>
               <Td className="font-mono text-gray-600">{u.username}</Td>
-              <Td className="font-medium">{u.displayName}</Td>
+              <Td className="font-medium">
+                <div>{u.displayName}</div>
+                <div className="mt-1 text-[11px] font-normal text-blue-600">{u.isSystemAccount ? 'admin' : u.role}</div>
+              </Td>
               <Td>
                 <span className={`text-xs px-2 py-0.5 rounded ${u.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                   {u.isActive ? 'ใช้งาน' : 'ปิดใช้งาน'}
@@ -360,7 +398,7 @@ function UsersTab() {
               </Td>
               <Td>
                 <div className="flex gap-1">
-                  {isSysAdmin && (
+                  {isAdmin && (
                     <>
                       <button onClick={() => { setEditingName(u); setError(''); setSuccess('') }}
                         className="p-1 rounded hover:bg-gray-100 text-gray-400" title="แก้ไขชื่อ">
@@ -374,6 +412,15 @@ function UsersTab() {
                         <button onClick={() => setDeactivateId(u.id)}
                           className="p-1 rounded hover:bg-red-50 text-red-400" title="ปิดใช้งาน">
                           <X size={13} />
+                        </button>
+                      )}
+                      {!u.isActive && (
+                        <button
+                          onClick={() => api.activateUser(u.id, currentUser?.id ?? 1).then(load)}
+                          className="px-2 py-1 rounded hover:bg-green-50 text-xs font-medium text-green-600"
+                          title="เปิดใช้งานกลับ"
+                        >
+                          Activate
                         </button>
                       )}
                     </>

@@ -26,7 +26,7 @@ interface Props {
 }
 
 export function Sidebar({ onLogout }: Props) {
-  const { currentUser } = useUser()
+  const { currentUser, canManageMaster } = useUser()
   const [showAbout, setShowAbout] = useState(false)
   const [showChangePw, setShowChangePw] = useState(false)
 
@@ -38,7 +38,7 @@ export function Sidebar({ onLogout }: Props) {
           <p className="text-sm font-medium text-slate-200">ระบบสต๊อกเวชภัณฑ์</p>
         </div>
         <nav className="flex-1 py-2 overflow-y-auto">
-          {nav.map(({ to, label, icon: Icon }) => (
+          {nav.filter(item => item.to !== '/master' || canManageMaster).map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -65,7 +65,7 @@ export function Sidebar({ onLogout }: Props) {
             <UserIcon size={13} className="shrink-0 text-slate-400" />
             <div className="flex-1 min-w-0">
               <p className="truncate font-medium">{currentUser?.displayName}</p>
-              <p className="truncate text-slate-500">{currentUser?.username}</p>
+              <p className="truncate text-slate-500">{currentUser?.username} · {currentUser?.isSystemAccount ? 'admin' : currentUser?.role}</p>
             </div>
           </div>
 
@@ -85,7 +85,7 @@ export function Sidebar({ onLogout }: Props) {
           >
             <Info size={13} />
             <span>เกี่ยวกับโปรแกรม</span>
-            <span className="ml-auto text-slate-600">v1.0.0β</span>
+            <span className="ml-auto text-slate-600">v1.0.01</span>
           </button>
 
           {/* Logout */}
@@ -113,7 +113,7 @@ export function Sidebar({ onLogout }: Props) {
               </button>
             </div>
             <div className="text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
-              Version 1.0.0 Beta
+              Version 1.0.01
             </div>
             <div className="space-y-2">
               <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">ผู้พัฒนา</p>
@@ -218,3 +218,4 @@ function PwField({ label, value, show, onToggle, onChange, onEnter }: {
     </div>
   )
 }
+

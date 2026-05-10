@@ -36,6 +36,7 @@ export interface User {
   username: string
   displayName: string
   isSystemAccount: boolean
+  role: 'admin' | 'staff' | 'viewer'
   isActive: boolean
   lockedAt: string
   lastSelectedAt: string

@@ -12,7 +12,7 @@ import { useUser } from '../../context/UserContext'
 
 export function StockOutListPage() {
   const navigate = useNavigate()
-  const { isGuest } = useUser()
+  const { canWriteStock } = useUser()
   const [docs, setDocs] = useState<StockDocument[]>([])
   const [filter, setFilter] = useState<DocFilter>({ documentType: 'OUT', status: '', dateFrom: '', dateTo: '', search: '' })
 
@@ -24,7 +24,7 @@ export function StockOutListPage() {
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-800">ใบเบิกสินค้า</h1>
-        {!isGuest && <Button size="sm" onClick={() => navigate('/stock-out/new')}><Plus size={14} /> สร้างใบเบิกสินค้า</Button>}
+        {canWriteStock && <Button size="sm" onClick={() => navigate('/stock-out/new')}><Plus size={14} /> สร้างใบเบิกสินค้า</Button>}
       </div>
       <div className="flex gap-3 flex-wrap">
         <Input placeholder="ค้นหาเลขเอกสาร/หน่วยงาน" value={filter.search} onChange={e => setFilter(f => ({ ...f, search: e.target.value }))} />

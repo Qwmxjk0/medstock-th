@@ -36,37 +36,38 @@ type ProductCategory struct {
 }
 
 type User struct {
-	ID             int64  `json:"id"`
-	Username       string `json:"username"`
-	DisplayName    string `json:"displayName"`
-	IsSystemAccount bool  `json:"isSystemAccount"`
-	IsActive       bool   `json:"isActive"`
-	LockedAt       string `json:"lockedAt"`
-	LastSelectedAt string `json:"lastSelectedAt"`
-	CreatedAt      string `json:"createdAt"`
-	UpdatedAt      string `json:"updatedAt"`
+	ID              int64  `json:"id"`
+	Username        string `json:"username"`
+	DisplayName     string `json:"displayName"`
+	IsSystemAccount bool   `json:"isSystemAccount"`
+	Role            string `json:"role"`
+	IsActive        bool   `json:"isActive"`
+	LockedAt        string `json:"lockedAt"`
+	LastSelectedAt  string `json:"lastSelectedAt"`
+	CreatedAt       string `json:"createdAt"`
+	UpdatedAt       string `json:"updatedAt"`
 }
 
 // ─── Products ───────────────────────────────────────────────────────────────
 
 type Product struct {
-	ID                     int64   `json:"id"`
-	Code                   string  `json:"code"`
-	Name                   string  `json:"name"`
-	CategoryID             *int64  `json:"categoryId"`
-	CategoryName           string  `json:"categoryName"`
-	BaseUnitID             int64   `json:"baseUnitId"`
-	BaseUnitName           string  `json:"baseUnitName"`
-	DefaultPurchaseUnitID  *int64  `json:"defaultPurchaseUnitId"`
-	DefaultIssueUnitID     *int64  `json:"defaultIssueUnitId"`
-	PackageSize            float64 `json:"packageSize"`
-	ReorderLevel           float64 `json:"reorderLevel"`
-	DefaultPrice           float64 `json:"defaultPrice"`
-	IsActive               bool    `json:"isActive"`
-	CurrentStock           float64 `json:"currentStock"`
-	HasNearExpiry          bool    `json:"hasNearExpiry"`
-	CreatedAt              string  `json:"createdAt"`
-	UpdatedAt              string  `json:"updatedAt"`
+	ID                    int64   `json:"id"`
+	Code                  string  `json:"code"`
+	Name                  string  `json:"name"`
+	CategoryID            *int64  `json:"categoryId"`
+	CategoryName          string  `json:"categoryName"`
+	BaseUnitID            int64   `json:"baseUnitId"`
+	BaseUnitName          string  `json:"baseUnitName"`
+	DefaultPurchaseUnitID *int64  `json:"defaultPurchaseUnitId"`
+	DefaultIssueUnitID    *int64  `json:"defaultIssueUnitId"`
+	PackageSize           float64 `json:"packageSize"`
+	ReorderLevel          float64 `json:"reorderLevel"`
+	DefaultPrice          float64 `json:"defaultPrice"`
+	IsActive              bool    `json:"isActive"`
+	CurrentStock          float64 `json:"currentStock"`
+	HasNearExpiry         bool    `json:"hasNearExpiry"`
+	CreatedAt             string  `json:"createdAt"`
+	UpdatedAt             string  `json:"updatedAt"`
 }
 
 type ProductAlias struct {
@@ -78,56 +79,56 @@ type ProductAlias struct {
 }
 
 type ProductUnitConversion struct {
-	ID          int64   `json:"id"`
-	ProductID   int64   `json:"productId"`
-	FromUnitID  int64   `json:"fromUnitId"`
-	FromUnitName string `json:"fromUnitName"`
-	ToUnitID    int64   `json:"toUnitId"`
-	ToUnitName  string  `json:"toUnitName"`
-	Factor      float64 `json:"factor"`
-	IsActive    bool    `json:"isActive"`
+	ID           int64   `json:"id"`
+	ProductID    int64   `json:"productId"`
+	FromUnitID   int64   `json:"fromUnitId"`
+	FromUnitName string  `json:"fromUnitName"`
+	ToUnitID     int64   `json:"toUnitId"`
+	ToUnitName   string  `json:"toUnitName"`
+	Factor       float64 `json:"factor"`
+	IsActive     bool    `json:"isActive"`
 }
 
 // ─── Stock Lots ──────────────────────────────────────────────────────────────
 
 type StockLot struct {
-	ID              int64   `json:"id"`
-	ProductID       int64   `json:"productId"`
-	ProductCode     string  `json:"productCode"`
-	ProductName     string  `json:"productName"`
-	LotNo           string  `json:"lotNo"`
-	ExpireDate      string  `json:"expireDate"`
-	QuantityOnHand  float64 `json:"quantityOnHand"`
-	UnitCost        float64 `json:"unitCost"`
-	SupplierID      *int64  `json:"supplierId"`
-	SupplierName    string  `json:"supplierName"`
-	CreatedAt       string  `json:"createdAt"`
-	UpdatedAt       string  `json:"updatedAt"`
+	ID             int64   `json:"id"`
+	ProductID      int64   `json:"productId"`
+	ProductCode    string  `json:"productCode"`
+	ProductName    string  `json:"productName"`
+	LotNo          string  `json:"lotNo"`
+	ExpireDate     string  `json:"expireDate"`
+	QuantityOnHand float64 `json:"quantityOnHand"`
+	UnitCost       float64 `json:"unitCost"`
+	SupplierID     *int64  `json:"supplierId"`
+	SupplierName   string  `json:"supplierName"`
+	CreatedAt      string  `json:"createdAt"`
+	UpdatedAt      string  `json:"updatedAt"`
 }
 
 // ─── Stock Documents ─────────────────────────────────────────────────────────
 
 type StockDocument struct {
-	ID            int64   `json:"id"`
-	DocumentNo    string  `json:"documentNo"`
-	ReferenceNo   string  `json:"referenceNo"`
-	DocumentType  string  `json:"documentType"`
-	DocumentDate  string  `json:"documentDate"`
-	SupplierID    *int64  `json:"supplierId"`
-	SupplierName  string  `json:"supplierName"`
-	DepartmentID  *int64  `json:"departmentId"`
-	DepartmentName string  `json:"departmentName"`
-	Status        string  `json:"status"`
-	Note          string  `json:"note"`
-	CreatedBy     int64   `json:"createdBy"`
-	CreatedByName string  `json:"createdByName"`
-	ConfirmedBy   *int64  `json:"confirmedBy"`
-	ConfirmedByName string `json:"confirmedByName"`
-	ConfirmedAt   string  `json:"confirmedAt"`
-	CreatedAt     string  `json:"createdAt"`
-	UpdatedAt     string  `json:"updatedAt"`
-	Items         []StockDocumentItem `json:"items"`
-	TotalValue    float64 `json:"totalValue"`
+	ID              int64               `json:"id"`
+	DocumentNo      string              `json:"documentNo"`
+	ReferenceNo     string              `json:"referenceNo"`
+	DocumentType    string              `json:"documentType"`
+	DocumentDate    string              `json:"documentDate"`
+	SupplierID      *int64              `json:"supplierId"`
+	SupplierName    string              `json:"supplierName"`
+	DepartmentID    *int64              `json:"departmentId"`
+	DepartmentName  string              `json:"departmentName"`
+	Status          string              `json:"status"`
+	Note            string              `json:"note"`
+	CreatedBy       int64               `json:"createdBy"`
+	CreatedByName   string              `json:"createdByName"`
+	ConfirmedBy     *int64              `json:"confirmedBy"`
+	ConfirmedByName string              `json:"confirmedByName"`
+	ConfirmedAt     string              `json:"confirmedAt"`
+	CreatedAt       string              `json:"createdAt"`
+	UpdatedAt       string              `json:"updatedAt"`
+	Items           []StockDocumentItem `json:"items"`
+	TotalValue      float64             `json:"totalValue"`
 }
 
 type StockDocumentItem struct {
@@ -152,34 +153,34 @@ type StockDocumentItem struct {
 // ─── Stock Movements ─────────────────────────────────────────────────────────
 
 type StockMovement struct {
-	ID                   int64   `json:"id"`
-	DocumentID           int64   `json:"documentId"`
-	DocumentNo           string  `json:"documentNo"`
-	DocumentItemID       int64   `json:"documentItemId"`
-	ProductID            int64   `json:"productId"`
-	LotID                int64   `json:"lotId"`
-	LotNo                string  `json:"lotNo"`
-	ExpireDate           string  `json:"expireDate"`
-	MovementType         string  `json:"movementType"`
-	QuantityIn           float64 `json:"quantityIn"`
-	QuantityOut          float64 `json:"quantityOut"`
-	LotBalanceAfter      float64 `json:"lotBalanceAfter"`
-	ProductBalanceAfter  float64 `json:"productBalanceAfter"`
-	CreatedBy            int64   `json:"createdBy"`
-	CreatedByName        string  `json:"createdByName"`
-	CreatedAt            string  `json:"createdAt"`
+	ID                  int64   `json:"id"`
+	DocumentID          int64   `json:"documentId"`
+	DocumentNo          string  `json:"documentNo"`
+	DocumentItemID      int64   `json:"documentItemId"`
+	ProductID           int64   `json:"productId"`
+	LotID               int64   `json:"lotId"`
+	LotNo               string  `json:"lotNo"`
+	ExpireDate          string  `json:"expireDate"`
+	MovementType        string  `json:"movementType"`
+	QuantityIn          float64 `json:"quantityIn"`
+	QuantityOut         float64 `json:"quantityOut"`
+	LotBalanceAfter     float64 `json:"lotBalanceAfter"`
+	ProductBalanceAfter float64 `json:"productBalanceAfter"`
+	CreatedBy           int64   `json:"createdBy"`
+	CreatedByName       string  `json:"createdByName"`
+	CreatedAt           string  `json:"createdAt"`
 }
 
 // ─── Dashboard ───────────────────────────────────────────────────────────────
 
 type DashboardSummary struct {
-	LowStockCount     int     `json:"lowStockCount"`
-	OutOfStockCount   int     `json:"outOfStockCount"`
-	NearExpiryCount   int     `json:"nearExpiryCount"`
-	TotalStockValue   float64 `json:"totalStockValue"`
-	TodayInCount      int     `json:"todayInCount"`
-	TodayOutCount     int     `json:"todayOutCount"`
-	RecentDocuments   []StockDocument `json:"recentDocuments"`
+	LowStockCount   int             `json:"lowStockCount"`
+	OutOfStockCount int             `json:"outOfStockCount"`
+	NearExpiryCount int             `json:"nearExpiryCount"`
+	TotalStockValue float64         `json:"totalStockValue"`
+	TodayInCount    int             `json:"todayInCount"`
+	TodayOutCount   int             `json:"todayOutCount"`
+	RecentDocuments []StockDocument `json:"recentDocuments"`
 }
 
 type LowStockItem struct {
@@ -206,26 +207,26 @@ type ExpiryAlert struct {
 // ─── Request types ───────────────────────────────────────────────────────────
 
 type CreateProductRequest struct {
-	Code                   string  `json:"code"`
-	Name                   string  `json:"name"`
-	CategoryID             *int64  `json:"categoryId"`
-	BaseUnitID             int64   `json:"baseUnitId"`
-	DefaultPurchaseUnitID  *int64  `json:"defaultPurchaseUnitId"`
-	DefaultIssueUnitID     *int64  `json:"defaultIssueUnitId"`
-	PackageSize            float64 `json:"packageSize"`
-	ReorderLevel           float64 `json:"reorderLevel"`
-	DefaultPrice           float64 `json:"defaultPrice"`
+	Code                  string  `json:"code"`
+	Name                  string  `json:"name"`
+	CategoryID            *int64  `json:"categoryId"`
+	BaseUnitID            int64   `json:"baseUnitId"`
+	DefaultPurchaseUnitID *int64  `json:"defaultPurchaseUnitId"`
+	DefaultIssueUnitID    *int64  `json:"defaultIssueUnitId"`
+	PackageSize           float64 `json:"packageSize"`
+	ReorderLevel          float64 `json:"reorderLevel"`
+	DefaultPrice          float64 `json:"defaultPrice"`
 }
 
 type CreateDocumentRequest struct {
-	DocumentType  string  `json:"documentType"`
-	DocumentDate  string  `json:"documentDate"`
-	DocumentNo    string  `json:"documentNo"`
-	ReferenceNo   string  `json:"referenceNo"`
-	SupplierID    *int64  `json:"supplierId"`
-	DepartmentID  *int64  `json:"departmentId"`
-	Note          string  `json:"note"`
-	CreatedBy     int64   `json:"createdBy"`
+	DocumentType string `json:"documentType"`
+	DocumentDate string `json:"documentDate"`
+	DocumentNo   string `json:"documentNo"`
+	ReferenceNo  string `json:"referenceNo"`
+	SupplierID   *int64 `json:"supplierId"`
+	DepartmentID *int64 `json:"departmentId"`
+	Note         string `json:"note"`
+	CreatedBy    int64  `json:"createdBy"`
 }
 
 type DocumentItemRequest struct {
@@ -256,10 +257,10 @@ type LotAllocation struct {
 }
 
 type AdjustmentRequest struct {
-	DocumentDate string               `json:"documentDate"`
-	Note         string               `json:"note"`
-	Reason       string               `json:"reason"`
-	CreatedBy    int64                `json:"createdBy"`
+	DocumentDate string                  `json:"documentDate"`
+	Note         string                  `json:"note"`
+	Reason       string                  `json:"reason"`
+	CreatedBy    int64                   `json:"createdBy"`
 	Items        []AdjustmentItemRequest `json:"items"`
 }
 

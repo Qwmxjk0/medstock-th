@@ -14,7 +14,7 @@ import { Plus, Trash2, CheckCircle, XCircle, ArrowLeft } from 'lucide-react'
 import { useUser } from '../../context/UserContext'
 
 export function StockInFormPage() {
-  const { isGuest, currentUser } = useUser()
+  const { canWriteStock, currentUser } = useUser()
   const { id } = useParams()
   const navigate = useNavigate()
   const isNew = id === 'new'
@@ -180,7 +180,7 @@ export function StockInFormPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
           <h2 className="text-sm font-semibold text-gray-700">รายการเวชภัณฑ์</h2>
 
-          {isDraft && !isGuest && (
+          {isDraft && canWriteStock && (
             <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
               <p className="text-xs font-medium text-gray-600 mb-2">เพิ่มรายการ</p>
               <div className="grid grid-cols-2 md:grid-cols-6 gap-2 items-end">
@@ -217,7 +217,7 @@ export function StockInFormPage() {
                   <Td className="text-right">{formatNumber(it.quantity)}</Td>
                   <Td className="text-right">฿{formatNumber(it.unitCost)}</Td>
                   <Td className="text-right font-medium">฿{formatNumber(it.quantity * it.unitCost)}</Td>
-                  {isDraft && !isGuest && (
+                  {isDraft && canWriteStock && (
                     <Td>
                       <button onClick={() => removeItem(it.id)} className="p-1 rounded hover:bg-red-50 text-red-400">
                         <Trash2 size={13} />
@@ -242,7 +242,7 @@ export function StockInFormPage() {
       )}
 
       {/* Actions */}
-      {doc && isDraft && !isGuest && (
+      {doc && isDraft && canWriteStock && (
         <div className="flex gap-3">
           <Button onClick={() => setPwConfirmOpen(true)} className="gap-2">
             <CheckCircle size={15} /> ยืนยันรับสินค้า
@@ -272,3 +272,4 @@ export function StockInFormPage() {
     </div>
   )
 }
+

@@ -168,8 +168,9 @@ export function UserSelectPage({ onLoggedIn }: Props) {
           )}
         </div>
 
-        <p className="text-center text-xs text-slate-500 mt-6">v1.0.0β · MedStock</p>
+        <p className="text-center text-xs text-slate-500 mt-6">v1.0.01 · MedStock</p>
       </div>
     </div>
   )
 }
+

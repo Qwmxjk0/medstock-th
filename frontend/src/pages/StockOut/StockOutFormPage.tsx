@@ -14,7 +14,7 @@ import { Plus, Trash2, CheckCircle, XCircle, ArrowLeft, Info } from 'lucide-reac
 import { useUser } from '../../context/UserContext'
 
 export function StockOutFormPage() {
-  const { isGuest, currentUser } = useUser()
+  const { canWriteStock, currentUser } = useUser()
   const { id } = useParams()
   const navigate = useNavigate()
   const isNew = id === 'new'
@@ -146,7 +146,7 @@ export function StockOutFormPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
           <h2 className="text-sm font-semibold text-gray-700">รายการเวชภัณฑ์</h2>
 
-          {isDraft && !isGuest && (
+          {isDraft && canWriteStock && (
             <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 space-y-2">
               <p className="text-xs font-medium text-gray-600">เพิ่มรายการ</p>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-end">
@@ -195,7 +195,7 @@ export function StockOutFormPage() {
 
           <Table>
             <Thead>
-              <Tr><Th>สินค้า</Th><Th className="text-right">ขอ</Th><Th className="text-right">อนุมัติ</Th><Th className="text-right">จ่ายจริง</Th><Th>หมายเหตุ</Th>{isDraft && !isGuest && <Th></Th>}</Tr>
+              <Tr><Th>สินค้า</Th><Th className="text-right">ขอ</Th><Th className="text-right">อนุมัติ</Th><Th className="text-right">จ่ายจริง</Th><Th>หมายเหตุ</Th>{isDraft && canWriteStock && <Th></Th>}</Tr>
             </Thead>
             <Tbody>
               {(doc.items ?? []).map(it => (
@@ -205,7 +205,7 @@ export function StockOutFormPage() {
                   <Td className="text-right">{formatNumber(it.approvedQty)}</Td>
                   <Td className="text-right font-medium text-green-700">{it.issuedQty > 0 ? formatNumber(it.issuedQty) : '-'}</Td>
                   <Td className="text-gray-500 text-xs">{it.note || '-'}</Td>
-                  {isDraft && !isGuest && <Td><button onClick={() => removeItem(it.id)} className="p-1 rounded hover:bg-red-50 text-red-400"><Trash2 size={13} /></button></Td>}
+                  {isDraft && canWriteStock && <Td><button onClick={() => removeItem(it.id)} className="p-1 rounded hover:bg-red-50 text-red-400"><Trash2 size={13} /></button></Td>}
                 </Tr>
               ))}
               {(doc.items ?? []).length === 0 && (
@@ -216,7 +216,7 @@ export function StockOutFormPage() {
         </div>
       )}
 
-      {doc && isDraft && !isGuest && (
+      {doc && isDraft && canWriteStock && (
         <div className="flex gap-3">
           <Button onClick={() => setPwConfirmOpen(true)}><CheckCircle size={15} /> ยืนยันเบิกสินค้า</Button>
           <Button variant="danger" onClick={() => setConfirmAction('cancel')}><XCircle size={15} /> ยกเลิกเอกสาร</Button>
@@ -241,3 +241,4 @@ export function StockOutFormPage() {
     </div>
   )
 }
+

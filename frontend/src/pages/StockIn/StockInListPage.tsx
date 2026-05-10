@@ -12,7 +12,7 @@ import { useUser } from '../../context/UserContext'
 
 export function StockInListPage() {
   const navigate = useNavigate()
-  const { isGuest } = useUser()
+  const { canWriteStock } = useUser()
   const [docs, setDocs] = useState<StockDocument[]>([])
   const [filter, setFilter] = useState<DocFilter>({ documentType: 'IN', status: '', dateFrom: '', dateTo: '', search: '' })
 
@@ -23,7 +23,7 @@ export function StockInListPage() {
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-800">ใบรับสินค้า</h1>
-        {!isGuest && <Button size="sm" onClick={() => navigate('/stock-in/new')}><Plus size={14} /> สร้างใบรับสินค้า</Button>}
+        {canWriteStock && <Button size="sm" onClick={() => navigate('/stock-in/new')}><Plus size={14} /> สร้างใบรับสินค้า</Button>}
       </div>
       <div className="flex gap-3 flex-wrap">
         <Input placeholder="ค้นหาเลขเอกสาร/ชื่อบริษัท" value={filter.search} onChange={e => setFilter(f => ({ ...f, search: e.target.value }))} />

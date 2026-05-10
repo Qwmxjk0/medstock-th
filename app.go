@@ -3,9 +3,12 @@ package main
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"time"
 
 	"medstock/db"
 	"medstock/models"
@@ -16,13 +19,14 @@ import (
 
 // App is the single Wails-bound struct. All frontend-callable methods live here.
 type App struct {
-	ctx       context.Context
-	sqlDB     *sql.DB
-	masterSvc *services.MasterService
+	ctx        context.Context
+	sqlDB      *sql.DB
+	dbPath     string
+	masterSvc  *services.MasterService
 	productSvc *services.ProductService
-	stockSvc  *services.StockService
-	exportSvc *services.ExportService
-	importSvc *services.ImportService
+	stockSvc   *services.StockService
+	exportSvc  *services.ExportService
+	importSvc  *services.ImportService
 }
 
 func NewApp() *App {
@@ -40,11 +44,17 @@ func (a *App) startup(ctx context.Context) {
 	if err := os.MkdirAll(dbDir, 0755); err != nil {
 		log.Fatalf("cannot create db dir: %v", err)
 	}
-	dbPath := filepath.Join(dbDir, "medstock.db")
+	a.dbPath = filepath.Join(dbDir, "medstock.db")
 
-	database, err := db.Open(dbPath)
-	if err != nil {
+	if err := a.openDatabase(); err != nil {
 		log.Fatalf("cannot open database: %v", err)
+	}
+}
+
+func (a *App) openDatabase() error {
+	database, err := db.Open(a.dbPath)
+	if err != nil {
+		return err
 	}
 	a.sqlDB = database
 	a.masterSvc = services.NewMasterService(database)
@@ -52,6 +62,7 @@ func (a *App) startup(ctx context.Context) {
 	a.stockSvc = services.NewStockService(database)
 	a.exportSvc = services.NewExportService(database)
 	a.importSvc = services.NewImportService(database)
+	return nil
 }
 
 func (a *App) shutdown(_ context.Context) {
@@ -105,7 +116,7 @@ func (a *App) GetUnits(activeOnly bool) ([]models.Unit, error) {
 	return a.masterSvc.GetUnits(activeOnly)
 }
 func (a *App) SaveUnit(u models.Unit) (int64, error) { return a.masterSvc.SaveUnit(u) }
-func (a *App) DeactivateUnit(id, userID int64) error  { return a.masterSvc.DeactivateUnit(id, userID) }
+func (a *App) DeactivateUnit(id, userID int64) error { return a.masterSvc.DeactivateUnit(id, userID) }
 
 func (a *App) GetDepartments(activeOnly bool) ([]models.Department, error) {
 	return a.masterSvc.GetDepartments(activeOnly)
@@ -135,10 +146,11 @@ func (a *App) DeactivateCategory(id, userID int64) error {
 	return a.masterSvc.DeactivateCategory(id, userID)
 }
 
-func (a *App) GetUsers() ([]models.User, error)           { return a.masterSvc.GetUsers() }
-func (a *App) SaveUser(u models.User) (int64, error)       { return a.masterSvc.SaveUser(u) }
-func (a *App) DeactivateUser(id, adminID int64) error      { return a.masterSvc.DeactivateUser(id, adminID) }
-func (a *App) UpdateUserLastSelected(id int64) error       { return a.masterSvc.UpdateUserLastSelected(id) }
+func (a *App) GetUsers() ([]models.User, error)       { return a.masterSvc.GetUsers() }
+func (a *App) SaveUser(u models.User) (int64, error)  { return a.masterSvc.SaveUser(u) }
+func (a *App) DeactivateUser(id, adminID int64) error { return a.masterSvc.DeactivateUser(id, adminID) }
+func (a *App) ActivateUser(id, adminID int64) error   { return a.masterSvc.ActivateUser(id, adminID) }
+func (a *App) UpdateUserLastSelected(id int64) error  { return a.masterSvc.UpdateUserLastSelected(id) }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
 
@@ -266,6 +278,57 @@ func (a *App) ExportStockCard(productID int64, productName, dateFrom, dateTo, de
 func (a *App) ExportDocuments(docType, dateFrom, dateTo, destDir string) (string, error) {
 	return a.exportSvc.ExportDocuments(docType, dateFrom, dateTo, destDir)
 }
+func (a *App) BackupDatabase(destPath string) (string, error) {
+	return a.exportSvc.BackupDatabase(destPath)
+}
+func (a *App) RestoreDatabase(sourcePath string) (string, error) {
+	if sourcePath == "" {
+		return "", fmt.Errorf("กรุณาเลือกไฟล์ backup")
+	}
+	sourceAbs, err := filepath.Abs(sourcePath)
+	if err != nil {
+		return "", err
+	}
+	targetAbs, err := filepath.Abs(a.dbPath)
+	if err != nil {
+		return "", err
+	}
+	if sourceAbs == targetAbs {
+		return "", fmt.Errorf("ไฟล์ backup ต้องไม่ใช่ไฟล์ฐานข้อมูลที่กำลังใช้งาน")
+	}
+	if err := validateSQLiteBackup(sourceAbs); err != nil {
+		return "", err
+	}
+
+	preRestoreDir := filepath.Join(filepath.Dir(a.dbPath), "backups")
+	preRestorePath := filepath.Join(preRestoreDir, fmt.Sprintf("medstock-before-restore-%s.db", time.Now().Format("20060102-150405")))
+	if a.exportSvc != nil {
+		if backupPath, err := a.exportSvc.BackupDatabase(preRestorePath); err == nil {
+			preRestorePath = backupPath
+		} else {
+			return "", err
+		}
+	}
+
+	if a.sqlDB != nil {
+		if err := a.sqlDB.Close(); err != nil {
+			return "", err
+		}
+		a.sqlDB = nil
+	}
+	for _, suffix := range []string{"", "-wal", "-shm"} {
+		if err := os.Remove(a.dbPath + suffix); err != nil && !os.IsNotExist(err) {
+			return "", err
+		}
+	}
+	if err := copyFile(sourceAbs, a.dbPath); err != nil {
+		return "", err
+	}
+	if err := a.openDatabase(); err != nil {
+		return "", err
+	}
+	return preRestorePath, nil
+}
 
 // ─── Import ───────────────────────────────────────────────────────────────────
 
@@ -274,6 +337,17 @@ func (a *App) OpenFileDialog() string {
 		Title: "เลือกไฟล์ Excel",
 		Filters: []wailsruntime.FileFilter{
 			{DisplayName: "Excel Files (*.xlsx)", Pattern: "*.xlsx"},
+		},
+	})
+	return path
+}
+
+func (a *App) OpenBackupFileDialog() string {
+	path, _ := wailsruntime.OpenFileDialog(a.ctx, wailsruntime.OpenDialogOptions{
+		Title: "เลือกไฟล์ Backup",
+		Filters: []wailsruntime.FileFilter{
+			{DisplayName: "SQLite Backup (*.db)", Pattern: "*.db"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
 		},
 	})
 	return path
@@ -290,6 +364,18 @@ func (a *App) SaveFileDialog(defaultFilename string) string {
 	return path
 }
 
+func (a *App) SaveBackupFileDialog(defaultFilename string) string {
+	path, _ := wailsruntime.SaveFileDialog(a.ctx, wailsruntime.SaveDialogOptions{
+		Title:           "บันทึกไฟล์ Backup",
+		DefaultFilename: defaultFilename,
+		Filters: []wailsruntime.FileFilter{
+			{DisplayName: "SQLite Backup (*.db)", Pattern: "*.db"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
+		},
+	})
+	return path
+}
+
 func (a *App) PreviewProductsImport(filePath string) (*models.ProductImportPreview, error) {
 	return a.importSvc.PreviewProductsImport(filePath)
 }
@@ -301,4 +387,43 @@ func (a *App) PreviewStockImport(filePath string) (*models.StockImportPreview, e
 }
 func (a *App) ImportOpeningStock(filePath string, partial bool, userID int64) (*models.ImportResult, error) {
 	return a.importSvc.ImportOpeningStock(filePath, partial, userID)
+}
+
+func validateSQLiteBackup(path string) error {
+	dbConn, err := sql.Open("sqlite", path+"?_pragma=query_only(ON)")
+	if err != nil {
+		return fmt.Errorf("เปิดไฟล์ backup ไม่สำเร็จ: %w", err)
+	}
+	defer dbConn.Close()
+
+	var result string
+	if err := dbConn.QueryRow(`PRAGMA integrity_check`).Scan(&result); err != nil {
+		return fmt.Errorf("ตรวจสอบไฟล์ backup ไม่สำเร็จ: %w", err)
+	}
+	if result != "ok" {
+		return fmt.Errorf("ไฟล์ backup ไม่สมบูรณ์: %s", result)
+	}
+	return nil
+}
+
+func copyFile(source, target string) error {
+	src, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer src.Close()
+
+	if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+		return err
+	}
+	dst, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, src); err != nil {
+		return err
+	}
+	return dst.Sync()
 }

@@ -62,6 +62,9 @@ func (h *MasterHandler) SaveUser(u models.User) (int64, error) {
 func (h *MasterHandler) DeactivateUser(id int64, adminUserID int64) error {
 	return h.svc.DeactivateUser(id, adminUserID)
 }
+func (h *MasterHandler) ActivateUser(id int64, adminUserID int64) error {
+	return h.svc.ActivateUser(id, adminUserID)
+}
 func (h *MasterHandler) UpdateUserLastSelected(id int64) error {
 	return h.svc.UpdateUserLastSelected(id)
 }

@@ -11,7 +11,7 @@ import { StockCardModal } from './StockCardModal'
 import { useUser } from '../../context/UserContext'
 
 export function ProductsPage() {
-  const { currentUser, isGuest } = useUser()
+  const { currentUser, canManageMaster } = useUser()
   const [products, setProducts] = useState<Product[]>([])
   const [units, setUnits] = useState<Unit[]>([])
   const [categories, setCategories] = useState<ProductCategory[]>([])
@@ -39,7 +39,7 @@ export function ProductsPage() {
     <div className="p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-semibold text-gray-800">ทะเบียนเวชภัณฑ์</h1>
-        {!isGuest && <Button size="sm" onClick={openCreate}><Plus size={14} /> เพิ่มเวชภัณฑ์</Button>}
+        {canManageMaster && <Button size="sm" onClick={openCreate}><Plus size={14} /> เพิ่มเวชภัณฑ์</Button>}
       </div>
 
       <div className="flex gap-3 items-center">
@@ -102,10 +102,10 @@ export function ProductsPage() {
                   <button onClick={() => setStockCardProduct(p)} className="p-1 rounded hover:bg-gray-100 text-gray-400" title="Stock Card">
                     <ClipboardList size={13} />
                   </button>
-                  {!isGuest && <button onClick={() => openEdit(p)} className="p-1 rounded hover:bg-gray-100 text-gray-400">
+                  {canManageMaster && <button onClick={() => openEdit(p)} className="p-1 rounded hover:bg-gray-100 text-gray-400">
                     <Pencil size={13} />
                   </button>}
-                  {!isGuest && p.isActive && (
+                  {canManageMaster && p.isActive && (
                     <button onClick={() => setDeactivateId(p.id)} className="p-1 rounded hover:bg-red-50 text-red-400">
                       <X size={13} />
                     </button>

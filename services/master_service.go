@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"medstock/models"
 	"medstock/util"
+	"strings"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -222,7 +223,7 @@ func (s *MasterService) DeactivateCategory(id int64, userID int64) error {
 
 func (s *MasterService) GetUsers() ([]models.User, error) {
 	rows, err := s.db.Query(
-		`SELECT id, username, display_name, is_system_account, is_active,
+		`SELECT id, username, display_name, is_system_account, role, is_active,
 		        COALESCE(locked_at,''), COALESCE(last_selected_at,''), created_at, updated_at
 		 FROM users ORDER BY display_name`)
 	if err != nil {
@@ -233,7 +234,7 @@ func (s *MasterService) GetUsers() ([]models.User, error) {
 	for rows.Next() {
 		var u models.User
 		if err := rows.Scan(&u.ID, &u.Username, &u.DisplayName, &u.IsSystemAccount,
-			&u.IsActive, &u.LockedAt, &u.LastSelectedAt, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			&u.Role, &u.IsActive, &u.LockedAt, &u.LastSelectedAt, &u.CreatedAt, &u.UpdatedAt); err != nil {
 			return nil, err
 		}
 		list = append(list, u)
@@ -242,21 +243,24 @@ func (s *MasterService) GetUsers() ([]models.User, error) {
 }
 
 func (s *MasterService) SaveUser(u models.User) (int64, error) {
+	u.Username = strings.TrimSpace(u.Username)
+	u.DisplayName = strings.TrimSpace(u.DisplayName)
+	u.Role = normalizeUserRole(u.Role, u.IsSystemAccount)
 	if u.DisplayName == "" || u.Username == "" {
 		return 0, fmt.Errorf("ชื่อผู้ใช้และชื่อแสดงห้ามว่าง")
 	}
 	if u.ID == 0 {
 		res, err := s.db.Exec(
-			`INSERT INTO users(username, display_name) VALUES(?, ?)`,
-			u.Username, u.DisplayName)
+			`INSERT INTO users(username, display_name, role) VALUES(?, ?, ?)`,
+			u.Username, u.DisplayName, u.Role)
 		if err != nil {
 			return 0, fmt.Errorf("บันทึกผู้ใช้ไม่สำเร็จ: %w", err)
 		}
 		return res.LastInsertId()
 	}
 	_, err := s.db.Exec(
-		`UPDATE users SET display_name=?, updated_at=datetime('now','localtime') WHERE id=?`,
-		u.DisplayName, u.ID)
+		`UPDATE users SET username=?, display_name=?, role=?, updated_at=datetime('now','localtime') WHERE id=?`,
+		u.Username, u.DisplayName, u.Role, u.ID)
 	return u.ID, err
 }
 
@@ -269,10 +273,38 @@ func (s *MasterService) DeactivateUser(id int64, adminUserID int64) error {
 	return err
 }
 
+func (s *MasterService) ActivateUser(id int64, adminUserID int64) error {
+	_, err := s.db.Exec(
+		`UPDATE users SET is_active=1, updated_at=datetime('now','localtime') WHERE id=?`, id)
+	if err == nil {
+		util.WriteAuditLog(s.db, adminUserID, "ACTIVATE", "users", id, nil, nil)
+	}
+	return err
+}
+
 func (s *MasterService) UpdateUserLastSelected(id int64) error {
 	_, err := s.db.Exec(
 		`UPDATE users SET last_selected_at=datetime('now','localtime') WHERE id=?`, id)
 	return err
+}
+
+func normalizeUserRole(role string, isSystem bool) string {
+	if isSystem {
+		return "admin"
+	}
+	switch strings.ToLower(strings.TrimSpace(role)) {
+	case "admin", "staff", "viewer":
+		return strings.ToLower(strings.TrimSpace(role))
+	default:
+		return "staff"
+	}
+}
+
+func (s *MasterService) isAdminUser(userID int64) bool {
+	var role string
+	var isSys int
+	_ = s.db.QueryRow(`SELECT role, is_system_account FROM users WHERE id=?`, userID).Scan(&role, &isSys)
+	return isSys == 1 || strings.EqualFold(role, "admin")
 }
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────
@@ -282,12 +314,12 @@ func (s *MasterService) Login(username, password string) (*models.User, error) {
 	var u models.User
 	var hash sql.NullString
 	err := s.db.QueryRow(
-		`SELECT id, username, display_name, password_hash, is_system_account, is_active,
+		`SELECT id, username, display_name, password_hash, is_system_account, role, is_active,
 		        COALESCE(locked_at,''), COALESCE(last_selected_at,''), created_at, updated_at
 		 FROM users WHERE username=? AND is_active=1`,
 		username,
 	).Scan(&u.ID, &u.Username, &u.DisplayName, &hash, &u.IsSystemAccount,
-		&u.IsActive, &u.LockedAt, &u.LastSelectedAt, &u.CreatedAt, &u.UpdatedAt)
+		&u.Role, &u.IsActive, &u.LockedAt, &u.LastSelectedAt, &u.CreatedAt, &u.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, fmt.Errorf("ไม่พบผู้ใช้หรือถูกปิดใช้งาน")
 	}
@@ -351,9 +383,7 @@ func (s *MasterService) ResetPassword(adminID, targetUserID int64, newPassword s
 		return fmt.Errorf("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร")
 	}
 	// only sysadmin can reset others
-	var isSys int
-	s.db.QueryRow(`SELECT is_system_account FROM users WHERE id=?`, adminID).Scan(&isSys)
-	if isSys == 0 {
+	if !s.isAdminUser(adminID) {
 		return fmt.Errorf("เฉพาะผู้ดูแลระบบเท่านั้น")
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
@@ -371,15 +401,16 @@ func (s *MasterService) ResetPassword(adminID, targetUserID int64, newPassword s
 
 // CreateUser creates a new user with an initial password (sysadmin only).
 func (s *MasterService) CreateUser(adminID int64, u models.User, initialPassword string) (int64, error) {
+	u.Username = strings.TrimSpace(u.Username)
+	u.DisplayName = strings.TrimSpace(u.DisplayName)
+	u.Role = normalizeUserRole(u.Role, false)
 	if u.DisplayName == "" || u.Username == "" {
 		return 0, fmt.Errorf("ชื่อผู้ใช้และชื่อแสดงห้ามว่าง")
 	}
 	if len(initialPassword) < 6 {
 		return 0, fmt.Errorf("รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร")
 	}
-	var isSys int
-	s.db.QueryRow(`SELECT is_system_account FROM users WHERE id=?`, adminID).Scan(&isSys)
-	if isSys == 0 {
+	if !s.isAdminUser(adminID) {
 		return 0, fmt.Errorf("เฉพาะผู้ดูแลระบบเท่านั้น")
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(initialPassword), bcrypt.DefaultCost)
@@ -387,8 +418,8 @@ func (s *MasterService) CreateUser(adminID int64, u models.User, initialPassword
 		return 0, err
 	}
 	res, err := s.db.Exec(
-		`INSERT INTO users(username, display_name, password_hash, must_change_password) VALUES(?,?,?,1)`,
-		u.Username, u.DisplayName, string(hash))
+		`INSERT INTO users(username, display_name, role, password_hash, must_change_password) VALUES(?,?,?,?,1)`,
+		u.Username, u.DisplayName, u.Role, string(hash))
 	if err != nil {
 		return 0, fmt.Errorf("บันทึกผู้ใช้ไม่สำเร็จ: %w", err)
 	}
@@ -398,7 +429,7 @@ func (s *MasterService) CreateUser(adminID int64, u models.User, initialPassword
 // GetLoginableUsers returns active non-system users who have a password set (for login screen).
 func (s *MasterService) GetLoginableUsers() ([]models.User, error) {
 	rows, err := s.db.Query(
-		`SELECT id, username, display_name, is_system_account, is_active,
+		`SELECT id, username, display_name, is_system_account, role, is_active,
 		        COALESCE(locked_at,''), COALESCE(last_selected_at,''), created_at, updated_at
 		 FROM users
 		 WHERE is_active=1 AND password_hash IS NOT NULL AND password_hash != ''
@@ -411,7 +442,7 @@ func (s *MasterService) GetLoginableUsers() ([]models.User, error) {
 	for rows.Next() {
 		var u models.User
 		if err := rows.Scan(&u.ID, &u.Username, &u.DisplayName, &u.IsSystemAccount,
-			&u.IsActive, &u.LockedAt, &u.LastSelectedAt, &u.CreatedAt, &u.UpdatedAt); err != nil {
+			&u.Role, &u.IsActive, &u.LockedAt, &u.LastSelectedAt, &u.CreatedAt, &u.UpdatedAt); err != nil {
 			return nil, err
 		}
 		list = append(list, u)
